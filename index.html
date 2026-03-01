@@ -438,10 +438,77 @@
       color: var(--danger);
     }
 
-    #models-loading {
-      font-size: .78rem;
-      color: var(--warning);
+    /* ─── NEW AI VISUAL FEEDBACK OVERLAYS ─── */
+    .ai-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      z-index: 10;
+      transition: background 0.3s;
+    }
+
+    .ai-badge.loading {
+      background: rgba(255, 170, 0, 0.8);
+      color: #000;
+      animation: pulse-orange 1s infinite alternate;
+    }
+
+    .ai-badge.active {
+      background: rgba(0, 204, 102, 0.8);
+      color: #fff;
+    }
+
+    @keyframes pulse-orange {
+      0% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0.6;
+      }
+    }
+
+    .eye-box {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 6px 16px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 700;
       text-align: center;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .eye-box.looking {
+      background: rgba(0, 204, 102, 0.8);
+      color: #fff;
+    }
+
+    .eye-box.distracted {
+      background: rgba(218, 54, 51, 0.9);
+      color: #fff;
+      animation: pulse-red 0.8s infinite;
+    }
+
+    .eye-box.no-face {
+      background: rgba(218, 54, 51, 0.9);
+      color: #fff;
+    }
+
+    .eye-box.multi-face {
+      background: rgba(255, 140, 0, 0.9);
+      color: #000;
     }
 
     /* Question panel */
@@ -1013,10 +1080,10 @@
         <div class="camera-container">
           <video id="webcam" autoplay muted playsinline></video>
           <canvas id="faceCanvas"></canvas>
+          <div id="ai-status-badge" class="ai-badge loading">LOADING</div>
+          <div id="eye-box" class="eye-box looking" style="display:none;">LOOKING</div>
         </div>
-        <div id="face-status" class="face-status">✅ Face Detected</div>
-        <div id="models-loading">⏳ Loading AI models…</div>
-        <div class="camera-stats">
+        <div class="camera-stats" style="margin-top: 10px;">
           <div class="stat-row"><span>Tab Switches</span> <span id="stat-tab" class="bad">0</span></div>
           <div class="stat-row"><span>Face Violations</span> <span id="stat-face" class="bad">0</span></div>
           <div class="stat-row"><span>Multi-Face</span> <span id="stat-mface" class="bad">0</span></div>
@@ -1468,17 +1535,35 @@
         faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL)
       ]).then(function () {
         STATE.faceApiLoaded = true;
-        getEl('models-loading').style.display = 'none';
+
+        var badge = getEl('ai-status-badge');
+        if (badge) {
+          badge.className = 'ai-badge active';
+          badge.textContent = 'AI ACTIVE';
+        }
+
+        getEl('eye-box').style.display = 'block'; // Show eye tracking box
+
         log('Face API models loaded.');
         startFaceTracking();
-      }).catch(function (e) { log('Face API load error: ' + e.message); getEl('models-loading').textContent = '⚠️ Face AI unavailable'; });
+      }).catch(function (e) {
+        log('Face API load error: ' + e.message);
+        var badge = getEl('ai-status-badge');
+        if (badge) {
+          badge.className = 'ai-badge loading';
+          badge.style.background = 'rgba(218, 54, 51, 0.9)';
+          badge.textContent = 'ERROR';
+        }
+      });
     }
 
     function startFaceTracking() {
       var video = getEl('webcam');
       var canvas = getEl('faceCanvas');
-      var status = getEl('face-status');
+      var eyeBox = getEl('eye-box');
+
       var noFaceFrames = 0;
+      var distractedFrames = 0; // New tracker for distracted states
 
       STATE.trackingLoop = setInterval(async function () {
         if (!STATE.faceApiLoaded || video.readyState < 2) return;
@@ -1494,8 +1579,11 @@
 
         if (detections.length === 0) {
           noFaceFrames++;
-          status.textContent = '🚫 No Face Detected';
-          status.className = 'face-status red';
+          distractedFrames = 0; // Reset distracted if there's no face at all
+
+          eyeBox.textContent = 'NO FACE';
+          eyeBox.className = 'eye-box no-face';
+
           if (noFaceFrames >= 5 && !STATE.faceViolationCooldown) {
             noFaceFrames = 0;
             STATE.faceViolations++;
@@ -1504,9 +1592,12 @@
               'Your face was not visible on camera. Your current question has been burned and replaced. A snapshot has been taken and reported.', true);
           }
         } else if (detections.length >= 2) {
-          status.textContent = '👥 Multiple Faces!';
-          status.className = 'face-status red';
           noFaceFrames = 0;
+          distractedFrames = 0;
+
+          eyeBox.textContent = '2+ FACES';
+          eyeBox.className = 'eye-box multi-face';
+
           if (!STATE.faceViolationCooldown) {
             STATE.multiFaceViolations++;
             log('MULTI-FACE VIOLATION: ' + detections.length + ' faces detected. Count: ' + STATE.multiFaceViolations);
@@ -1537,14 +1628,22 @@
           ctx.strokeRect(zoneX, zoneY, zoneW, zoneH);
           ctx.setLineDash([]);
 
-          if (!eyesOk && !STATE.faceViolationCooldown) {
-            STATE.faceViolations++;
-            log('EYE VIOLATION: Eyes outside tracking zone. Count: ' + STATE.faceViolations);
-            triggerViolation('Eye Out', '👁️ Eyes Outside Tracking Zone!',
-              'Your eyes left the tracking zone. Please keep your eyes on the screen at all times. Your question has been burned and replaced. A snapshot was taken.', true);
+          if (!eyesOk) {
+            distractedFrames++;
+            eyeBox.textContent = 'DISTRACTED';
+            eyeBox.className = 'eye-box distracted';
+
+            if (distractedFrames >= 5 && !STATE.faceViolationCooldown) {
+              distractedFrames = 0;
+              STATE.faceViolations++;
+              log('EYE VIOLATION: Eyes outside tracking zone for 5 checks. Count: ' + STATE.faceViolations);
+              triggerViolation('Eye Out', '👁️ Eyes Outside Tracking Zone!',
+                'You were looking away from the screen for too long. Your question has been burned and replaced. A snapshot was taken.', true);
+            }
           } else {
-            status.textContent = '✅ Face Detected';
-            status.className = 'face-status';
+            distractedFrames = 0; // User looked back, reset grace period
+            eyeBox.textContent = 'LOOKING';
+            eyeBox.className = 'eye-box looking';
           }
         }
         updateStats();
