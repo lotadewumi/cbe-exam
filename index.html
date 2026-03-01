@@ -438,71 +438,10 @@
       color: var(--danger);
     }
 
-    /* Eye tracking UI */
-    #eye-box {
-      width: 100%;
-      border-radius: var(--radius-sm);
-      padding: 10px 12px;
-      font-size: .82rem;
-      font-weight: 700;
-      text-align: center;
-      margin-top: 6px;
-      transition: background 0.3s, color 0.3s;
-      display: none;
-      /* hidden until AI loads */
-    }
-
-    #eye-box.looking {
-      background: rgba(0, 255, 136, 0.2);
-      color: #00ff88;
-      border: 1px solid #00ff88;
-    }
-
-    #eye-box.distracted {
-      background: rgba(255, 68, 68, 0.2);
-      color: #ff4444;
-      border: 1px solid #ff4444;
-      animation: pulse-red 1s infinite;
-    }
-
-    #eye-box.no-face {
-      background: rgba(255, 68, 68, 0.4);
-      color: #fff;
-      border: 1px solid #ff4444;
-    }
-
-    #eye-box.multi-face {
-      background: rgba(255, 165, 0, 0.3);
-      color: orange;
-      border: 1px solid orange;
-    }
-
-    #ai-badge {
+    #models-loading {
       font-size: .78rem;
-      font-weight: 600;
-      text-align: center;
-      margin-top: 8px;
-    }
-
-    #ai-badge.loading {
       color: var(--warning);
-      animation: pulse-opacity 1.5s infinite;
-    }
-
-    #ai-badge.active {
-      color: #00ff88;
-    }
-
-    @keyframes pulse-opacity {
-
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: 0.5;
-      }
+      text-align: center;
     }
 
     /* Question panel */
@@ -1075,8 +1014,8 @@
           <video id="webcam" autoplay muted playsinline></video>
           <canvas id="faceCanvas"></canvas>
         </div>
-        <div id="eye-box" class="eye-box looking">👀 LOOKING</div>
-        <div id="ai-badge" class="loading">⏳ LOADING AI...</div>
+        <div id="face-status" class="face-status">✅ Face Detected</div>
+        <div id="models-loading">⏳ Loading AI models…</div>
         <div class="camera-stats">
           <div class="stat-row"><span>Tab Switches</span> <span id="stat-tab" class="bad">0</span></div>
           <div class="stat-row"><span>Face Violations</span> <span id="stat-face" class="bad">0</span></div>
@@ -1524,33 +1463,22 @@
     // ─── FACE API ────────────────────────────────────────────────
     function loadFaceApi() {
       var MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
-      var aiBadge = getEl('ai-badge');
-
       Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL)
       ]).then(function () {
         STATE.faceApiLoaded = true;
-        aiBadge.textContent = '🟢 AI ACTIVE';
-        aiBadge.className = 'active';
-        getEl('eye-box').style.display = 'block';
-
+        getEl('models-loading').style.display = 'none';
         log('Face API models loaded.');
         startFaceTracking();
-      }).catch(function (e) {
-        log('Face API load error: ' + e.message);
-        aiBadge.textContent = '⚠️ Face AI unavailable';
-        aiBadge.className = '';
-      });
+      }).catch(function (e) { log('Face API load error: ' + e.message); getEl('models-loading').textContent = '⚠️ Face AI unavailable'; });
     }
 
     function startFaceTracking() {
       var video = getEl('webcam');
       var canvas = getEl('faceCanvas');
-      var eyeBox = getEl('eye-box');
-
+      var status = getEl('face-status');
       var noFaceFrames = 0;
-      var distractedFrames = 0; // 5-frame limit before violation
 
       STATE.trackingLoop = setInterval(async function () {
         if (!STATE.faceApiLoaded || video.readyState < 2) return;
@@ -1566,10 +1494,8 @@
 
         if (detections.length === 0) {
           noFaceFrames++;
-          distractedFrames = 0;
-          eyeBox.textContent = '🚫 NO FACE';
-          eyeBox.className = 'no-face';
-
+          status.textContent = '🚫 No Face Detected';
+          status.className = 'face-status red';
           if (noFaceFrames >= 5 && !STATE.faceViolationCooldown) {
             noFaceFrames = 0;
             STATE.faceViolations++;
@@ -1578,11 +1504,9 @@
               'Your face was not visible on camera. Your current question has been burned and replaced. A snapshot has been taken and reported.', true);
           }
         } else if (detections.length >= 2) {
-          eyeBox.textContent = '👥 2+ FACES';
-          eyeBox.className = 'multi-face';
+          status.textContent = '👥 Multiple Faces!';
+          status.className = 'face-status red';
           noFaceFrames = 0;
-          distractedFrames = 0;
-
           if (!STATE.faceViolationCooldown) {
             STATE.multiFaceViolations++;
             log('MULTI-FACE VIOLATION: ' + detections.length + ' faces detected. Count: ' + STATE.multiFaceViolations);
@@ -1613,22 +1537,14 @@
           ctx.strokeRect(zoneX, zoneY, zoneW, zoneH);
           ctx.setLineDash([]);
 
-          if (!eyesOk) {
-            eyeBox.textContent = '⚠️ DISTRACTED';
-            eyeBox.className = 'distracted';
-            distractedFrames++;
-
-            if (distractedFrames >= 5 && !STATE.faceViolationCooldown) {
-              distractedFrames = 0;
-              STATE.faceViolations++;
-              log('EYE VIOLATION: Eyes outside tracking zone for 5 checks. Count: ' + STATE.faceViolations);
-              triggerViolation('Eye Out', '👁️ Eyes Outside Tracking Zone!',
-                'Your eyes left the tracking zone. Please keep your eyes on the screen at all times. Your question has been burned and replaced. A snapshot was taken.', true);
-            }
+          if (!eyesOk && !STATE.faceViolationCooldown) {
+            STATE.faceViolations++;
+            log('EYE VIOLATION: Eyes outside tracking zone. Count: ' + STATE.faceViolations);
+            triggerViolation('Eye Out', '👁️ Eyes Outside Tracking Zone!',
+              'Your eyes left the tracking zone. Please keep your eyes on the screen at all times. Your question has been burned and replaced. A snapshot was taken.', true);
           } else {
-            distractedFrames = 0;
-            eyeBox.textContent = '👀 LOOKING';
-            eyeBox.className = 'looking';
+            status.textContent = '✅ Face Detected';
+            status.className = 'face-status';
           }
         }
         updateStats();
