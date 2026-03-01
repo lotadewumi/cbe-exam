@@ -1529,7 +1529,9 @@
 
     // ─── FACE API ────────────────────────────────────────────────
     function loadFaceApi() {
-      var MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+      // Switched from jsdelivr to the official face-api.js models GitHub Pages host 
+      // because JSDelivr sometimes blocks or errors out on certain networks/mobile
+      var MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
       Promise.all([
         faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL)
