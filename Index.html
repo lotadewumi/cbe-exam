@@ -1,0 +1,1824 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CBE Exam Platform</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <!-- face-api.js for face & eye tracking -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    /* ─── RESET & BASE ───────────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --primary: #1a73e8;
+      --primary-dark: #1557b0;
+      --success: #238636;
+      --danger: #da3633;
+      --warning: #d29922;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* ─── SCREENS ────────────────────────────────────────── */
+    .screen {
+      display: none;
+      min-height: 100vh;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    /* ─── LOGIN SCREEN ──────────────────────────────────── */
+    #screen-login {
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at 60% 0%, #1a73e820 0%, transparent 60%),
+        radial-gradient(ellipse at 10% 80%, #1557b015 0%, transparent 50%), var(--bg);
+    }
+
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: 0 24px 64px #0008;
+    }
+
+    .login-card .logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .login-card .logo svg {
+      width: 48px;
+      height: 48px;
+    }
+
+    .login-card h1 {
+      font-size: 1.7rem;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    .login-card .subtitle {
+      text-align: center;
+      color: var(--muted);
+      font-size: .9rem;
+      margin-bottom: 32px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: .85rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 1rem;
+      font-family: inherit;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px #1a73e830;
+    }
+
+    .exam-notice {
+      background: #1a73e815;
+      border: 1px solid #1a73e840;
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: .85rem;
+      color: #7ab4f5;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .exam-notice strong {
+      color: #a8d1ff;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 13px 28px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all .2s;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px #1a73e840;
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      background: var(--surface2);
+    }
+
+    /* ─── INSTRUCTIONS SCREEN ───────────────────────────── */
+    #screen-instructions {
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      background: var(--bg);
+    }
+
+    .instructions-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px 32px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 64px #0008;
+    }
+
+    .instructions-card h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rules-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .rules-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: .95rem;
+      line-height: 1.5;
+    }
+
+    .rules-list li .icon {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .rules-list li.danger {
+      border-left: 3px solid var(--danger);
+    }
+
+    .rules-list li.warn {
+      border-left: 3px solid var(--warning);
+    }
+
+    .rules-list li.info {
+      border-left: 3px solid var(--primary);
+    }
+
+    .permission-notice {
+      background: #d2992215;
+      border: 1px solid #d2992240;
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      font-size: .9rem;
+      color: #e3b341;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    /* ─── EXAM SCREEN ───────────────────────────────────── */
+    #screen-exam {
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    .exam-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .exam-topbar .quiz-name {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .exam-topbar .student-info {
+      font-size: .85rem;
+      color: var(--muted);
+    }
+
+    #timer {
+      font-size: 1.4rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      background: var(--surface2);
+      padding: 6px 18px;
+      border-radius: 50px;
+      border: 1px solid var(--border);
+    }
+
+    #timer.warning {
+      color: var(--warning);
+      border-color: var(--warning);
+      animation: blink 1s ease-in-out infinite;
+    }
+
+    #timer.danger {
+      color: var(--danger);
+      border-color: var(--danger);
+      animation: blink .6s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .3
+      }
+    }
+
+    .exam-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* Camera panel */
+    .camera-panel {
+      width: 280px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px;
+      gap: 14px;
+    }
+
+    .camera-panel h3 {
+      font-size: .8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: var(--muted);
+    }
+
+    .camera-container {
+      position: relative;
+      width: 220px;
+      height: 165px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: #000;
+    }
+
+    #webcam {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    #faceCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transform: scaleX(-1);
+    }
+
+    .face-status {
+      width: 100%;
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: .82rem;
+      font-weight: 600;
+      text-align: center;
+      background: var(--success);
+      color: #fff;
+      transition: background .3s;
+    }
+
+    .face-status.red {
+      background: var(--danger);
+      animation: pulse-red .8s infinite;
+    }
+
+    @keyframes pulse-red {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: .6
+      }
+    }
+
+    .camera-stats {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: .8rem;
+    }
+
+    .stat-row span:first-child {
+      color: var(--muted);
+    }
+
+    .stat-row span:last-child {
+      font-weight: 600;
+    }
+
+    .stat-row span.bad {
+      color: var(--danger);
+    }
+
+    #models-loading {
+      font-size: .78rem;
+      color: var(--warning);
+      text-align: center;
+    }
+
+    /* Question panel */
+    .question-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 32px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .q-progress {
+      margin-bottom: 20px;
+    }
+
+    .q-progress-text {
+      font-size: .85rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .q-progress-bar {
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .q-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary), #4db6ff);
+      border-radius: 99px;
+      transition: width .4s ease;
+    }
+
+    .q-number {
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 8px;
+    }
+
+    .q-text {
+      font-size: 1.2rem;
+      font-weight: 600;
+      line-height: 1.7;
+      margin-bottom: 28px;
+    }
+
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .option-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 20px;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--text);
+      transition: all .2s;
+      text-align: left;
+    }
+
+    .option-btn:hover {
+      border-color: var(--primary);
+      background: #1a73e815;
+      transform: translateX(4px);
+    }
+
+    .option-btn.selected {
+      border-color: var(--primary);
+      background: #1a73e820;
+    }
+
+    .option-btn .opt-label {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: .85rem;
+      flex-shrink: 0;
+      transition: background .2s;
+    }
+
+    .option-btn.selected .opt-label {
+      background: var(--primary);
+    }
+
+    .fill-in-input {
+      width: 100%;
+      padding: 16px 20px;
+      background: var(--surface2);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 1.1rem;
+      font-family: inherit;
+      transition: all .2s;
+    }
+
+    .fill-in-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px #1a73e830;
+      background: #1a73e810;
+    }
+
+    .nav-row {
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+    }
+
+    .btn-nav {
+      width: auto;
+      padding: 12px 32px;
+    }
+
+    .btn-submit {
+      background: var(--success);
+      color: #fff;
+      width: auto;
+    }
+
+    .btn-submit:hover {
+      background: #2ea043;
+    }
+
+    /* ─── VIOLATION WARNING OVERLAY ─────────────────────── */
+    #violation-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #da363390;
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    #violation-overlay.show {
+      display: flex;
+    }
+
+    .violation-card {
+      background: #1a0505;
+      border: 2px solid var(--danger);
+      border-radius: 20px;
+      padding: 40px 48px;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 0 80px #da363360;
+      animation: pop-in .3s cubic-bezier(.175, .885, .32, 1.275);
+    }
+
+    @keyframes pop-in {
+      from {
+        transform: scale(.8);
+        opacity: 0
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1
+      }
+    }
+
+    .violation-card .v-icon {
+      font-size: 3.5rem;
+      margin-bottom: 12px;
+    }
+
+    .violation-card h2 {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #ff6b6b;
+      margin-bottom: 10px;
+    }
+
+    .violation-card p {
+      font-size: .95rem;
+      line-height: 1.6;
+      color: #ffb3b3;
+      margin-bottom: 20px;
+    }
+
+    #violation-count-display {
+      font-size: .85rem;
+      color: #ff9999;
+    }
+
+    #violation-dismiss {
+      background: var(--danger);
+      color: #fff;
+      width: auto;
+      padding: 12px 36px;
+      border-radius: var(--radius-sm);
+    }
+
+    /* ─── SUBMIT CONFIRM OVERLAY ────────────────────────── */
+    #submit-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      background: #00000080;
+      backdrop-filter: blur(6px);
+      align-items: center;
+      justify-content: center;
+    }
+
+    #submit-overlay.show {
+      display: flex;
+    }
+
+    .submit-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 40px;
+      max-width: 420px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 24px 64px #000a;
+    }
+
+    .submit-card h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .submit-card p {
+      color: var(--muted);
+      font-size: .95rem;
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+
+    .submit-btns {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .submit-btns .btn {
+      width: auto;
+    }
+
+    /* ─── RESULT SCREEN ─────────────────────────────────── */
+    #screen-result {
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      background: var(--bg);
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 580px;
+      box-shadow: 0 24px 64px #0008;
+    }
+
+    .result-card h1 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .score-circle {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      margin: 0 auto 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 6px solid var(--primary);
+      background: #1a73e815;
+      box-shadow: 0 0 40px #1a73e830;
+    }
+
+    .score-circle .score-val {
+      font-size: 2.4rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .score-circle .score-lbl {
+      font-size: .8rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .result-item {
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+    }
+
+    .result-item .ri-label {
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .result-item .ri-value {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .result-item .ri-value.red {
+      color: var(--danger);
+    }
+
+    .security-log-section {
+      margin-top: 20px;
+    }
+
+    .security-log-section h3 {
+      font-size: .9rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+    }
+
+    #result-log {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      font-size: .8rem;
+      font-family: monospace;
+      line-height: 1.7;
+      color: var(--muted);
+      max-height: 150px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    /* ─── UPLOAD PROGRESS ───────────────────────────────── */
+    #upload-progress-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: #0d1117f0;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #upload-progress-overlay.show {
+      display: flex;
+    }
+
+    .up-spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    #upload-status-text {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    #upload-sub-text {
+      font-size: .85rem;
+      color: var(--muted);
+    }
+
+    #loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10001;
+      background: #0d1117f0;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    #loading-overlay.show {
+      display: flex;
+    }
+
+    /* ─── RESPONSIVE ────────────────────────────────────── */
+    @media(max-width:768px) {
+      .exam-body {
+        flex-direction: column;
+      }
+
+      .camera-panel {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 12px;
+        gap: 10px;
+      }
+
+      .camera-container {
+        width: 140px;
+        height: 105px;
+      }
+
+      .question-panel {
+        padding: 20px 16px;
+      }
+
+      .face-status,
+      .camera-stats {
+        flex: 1;
+        min-width: 120px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ═══════════════════════════════════════════════
+     SCREEN 1: LOGIN
+════════════════════════════════════════════════ -->
+  <div id="screen-login" class="screen active">
+    <div class="login-card">
+      <div class="logo">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="48" height="48" rx="14" fill="#1a73e8" />
+          <path d="M12 14h24v4H12zM12 21h16v4H12zM12 28h20v4H12z" fill="white" />
+          <circle cx="36" cy="32" r="8" fill="#0d1117" />
+          <path d="M33 32l2 2 4-4" stroke="#238636" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <h1>CBE Exam Platform</h1>
+      <p class="subtitle">Computer-Based Examination System</p>
+
+      <div id="exam-notice" class="exam-notice">
+        <strong>📅 Exam Notice</strong><br />
+        Loading exam details…
+      </div>
+
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="input-name" placeholder="e.g. John Adewale Bello" autocomplete="name" />
+      </div>
+      <div class="form-group">
+        <label>Matric Number</label>
+        <input type="text" id="input-matric" placeholder="e.g. 2021/12345" autocomplete="off" />
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="input-email" placeholder="e.g. john@university.edu" autocomplete="email" />
+      </div>
+
+      <button class="btn btn-primary" onclick="proceedToInstructions()">
+        <span>Proceed to Instructions</span>
+        <span>→</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+     SCREEN 2: INSTRUCTIONS
+════════════════════════════════════════════════ -->
+  <div id="screen-instructions" class="screen">
+    <div class="instructions-card">
+      <h2>📋 Exam Instructions &amp; Rules</h2>
+      <ul class="rules-list" id="rules-list">
+        <li class="danger"><span class="icon">🔒</span><span>This exam is <strong>fully proctored</strong>. Your camera,
+            microphone, and screen activity are being monitored throughout.</span></li>
+        <li class="danger"><span class="icon">🚫</span><span><strong>Do NOT switch tabs or minimize this
+              window.</strong> Doing so will immediately burn your current question and replace it with a new one. It
+            will be flagged and logged.</span></li>
+        <li class="danger"><span class="icon">👁️</span><span><strong>Keep your face visible and eyes within the
+              tracking box at all times.</strong> Looking away will trigger a violation, burn the current question, and
+            take a camera snapshot.</span></li>
+        <li class="danger"><span class="icon">👥</span><span><strong>Only one face must be visible.</strong> If two
+            faces are detected, it will be immediately flagged, logged, and your question burned.</span></li>
+        <li class="warn"><span class="icon">🎙️</span><span>Your <strong>audio environment is being recorded</strong>
+            for the full duration of the exam. The recording is submitted to the admin on completion.</span></li>
+        <li class="warn"><span class="icon">⏱️</span><span>The timer starts the moment you click <strong>"Start
+              Exam"</strong>. When 1 minute remains, the timer will blink red.</span></li>
+        <li class="info"><span class="icon">✅</span><span>Answer each question by selecting an option and clicking
+            <strong>"Next"</strong>. You cannot go back to previous questions.</span></li>
+        <li class="info"><span class="icon">📸</span><span>Camera snapshots are taken automatically on any violation and
+            sent to the exam supervisor.</span></li>
+      </ul>
+      <div class="permission-notice">
+        ⚠️ Clicking <strong>"Start Exam"</strong> will request access to your <strong>Camera</strong> and
+        <strong>Microphone</strong>. You <strong>must</strong> allow these to proceed. Denying access will prevent you
+        from starting the exam.
+      </div>
+      <button class="btn btn-primary" onclick="startExam()">
+        <span>🎯 Start Exam</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+     SCREEN 3: EXAM
+════════════════════════════════════════════════ -->
+  <div id="screen-exam" class="screen">
+
+    <!-- Top bar -->
+    <div class="exam-topbar">
+      <div>
+        <div class="quiz-name" id="topbar-quiz-name">Loading…</div>
+        <div class="student-info" id="topbar-student">—</div>
+      </div>
+      <div id="timer">00:00</div>
+      <div style="font-size:.82rem; color:var(--muted);">Q <span id="topbar-q-num">—</span> of <span
+          id="topbar-q-total">—</span></div>
+    </div>
+
+    <div class="exam-body">
+      <!-- Camera panel -->
+      <div class="camera-panel">
+        <h3>📷 Proctoring Monitor</h3>
+        <div class="camera-container">
+          <video id="webcam" autoplay muted playsinline></video>
+          <canvas id="faceCanvas"></canvas>
+        </div>
+        <div id="face-status" class="face-status">✅ Face Detected</div>
+        <div id="models-loading">⏳ Loading AI models…</div>
+        <div class="camera-stats">
+          <div class="stat-row"><span>Tab Switches</span> <span id="stat-tab" class="bad">0</span></div>
+          <div class="stat-row"><span>Face Violations</span> <span id="stat-face" class="bad">0</span></div>
+          <div class="stat-row"><span>Multi-Face</span> <span id="stat-mface" class="bad">0</span></div>
+          <div class="stat-row"><span>Qs Burned</span> <span id="stat-burned" class="bad">0</span></div>
+        </div>
+      </div>
+
+      <!-- Question panel -->
+      <div class="question-panel">
+        <div class="q-progress">
+          <div class="q-progress-text">Progress: <span id="q-answered">0</span> answered</div>
+          <div class="q-progress-bar">
+            <div class="q-progress-fill" id="q-progress-fill" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="q-number" id="q-number">Question 1</div>
+        <div class="q-text" id="q-text">Loading question…</div>
+        <div class="options-grid" id="options-container"></div>
+        <div class="nav-row">
+          <div>
+            <button class="btn btn-outline btn-nav" id="btn-prev" style="display:none" onclick="previousQuestion()">←
+              Previous</button>
+          </div>
+          <div style="display:flex;gap:12px;">
+            <button class="btn btn-primary btn-nav" id="btn-next" onclick="nextQuestion()">Next →</button>
+            <button class="btn btn-submit btn-nav" id="btn-submit" style="display:none"
+              onclick="showSubmitConfirm()">Submit Exam ✓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+     SCREEN 4: RESULT
+════════════════════════════════════════════════ -->
+  <div id="screen-result" class="screen">
+    <div class="result-card">
+      <h1>🎓 Exam Complete</h1>
+      <div class="score-circle">
+        <div class="score-val" id="res-percentage">0%</div>
+        <div class="score-lbl">Score</div>
+      </div>
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="ri-label">Total Score</div>
+          <div class="ri-value" id="res-score">—</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-label">Total Questions</div>
+          <div class="ri-value" id="res-total-q">—</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-label">Time Taken</div>
+          <div class="ri-value" id="res-time">—</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-label">Exam Status</div>
+          <div class="ri-value" id="res-status">—</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-label">Tab Switches</div>
+          <div class="ri-value red" id="res-tabs">—</div>
+        </div>
+        <div class="result-item">
+          <div class="ri-label">Violations</div>
+          <div class="ri-value red" id="res-violations">—</div>
+        </div>
+      </div>
+      <div class="security-log-section" id="result-log-section" style="display:none">
+        <h3>Security Log</h3>
+        <div id="result-log"></div>
+      </div>
+      <p style="text-align:center;font-size:.85rem;color:var(--muted);margin-top:20px;">Your results have been
+        submitted. You may close this window.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+     VIOLATION WARNING OVERLAY
+════════════════════════════════════════════════ -->
+  <div id="violation-overlay">
+    <div class="violation-card">
+      <div class="v-icon">⚠️</div>
+      <h2 id="violation-title">Violation Detected!</h2>
+      <p id="violation-message">A security violation has been detected. Your current question has been
+        <strong>burned</strong> and replaced with a new one. This incident has been logged and reported to the admin.
+      </p>
+      <div id="violation-count-display"></div>
+      <br />
+      <button class="btn" id="violation-dismiss" onclick="dismissViolation()">I Understand — Continue</button>
+    </div>
+  </div>
+
+  <!-- SUBMIT CONFIRM OVERLAY -->
+  <div id="submit-overlay">
+    <div class="submit-card">
+      <h2>Submit Exam?</h2>
+      <p>Are you sure you want to submit? You <strong>cannot</strong> change your answers after submission.</p>
+      <div class="submit-btns">
+        <button class="btn btn-outline btn-nav"
+          onclick="document.getElementById('submit-overlay').classList.remove('show')">Cancel</button>
+        <button class="btn btn-success btn-nav" onclick="submitExamFinal()">Yes, Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPLOAD PROGRESS OVERLAY -->
+  <div id="upload-progress-overlay">
+    <div class="up-spinner"></div>
+    <div id="upload-status-text">Saving the record for review by supervisor…</div>
+    <div id="upload-sub-text">Please do not close this window.</div>
+  </div>
+
+  <!-- LOADING EXAM OVERLAY -->
+  <div id="loading-overlay">
+    <div class="up-spinner"></div>
+    <div id="loading-status-text" style="font-size: 1rem; font-weight: 600; color: var(--text);">Preparing Exam
+      Environment…</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════ -->
+  <script>
+    // ─── CONFIGURATION ──────────────────────────────────────────
+    // Replace this URL with your actual Google Apps Script Web App URL
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzV7-4rbtR1KX9Tf4st8BZZWRbr4uKb_0bt2l0zO4qjxhYHz5gTON9RkBTaXYOFSNkIvw/exec";
+
+    async function apiCall(action, data = {}) {
+      try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: action, data: data }),
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+        });
+        return await response.json();
+      } catch (err) {
+        throw new Error('Network error or invalid API response.');
+      }
+    }
+
+    // ─── STATE ──────────────────────────────────────────────────
+    var STATE = {
+      student: { name: '', matric: '', email: '' },
+      settings: {},
+      allQuestions: [],       // Full pool from backend
+      examQuestions: [],      // Active exam questions (size = questionsToPull)
+      currentIndex: 0,
+      answers: {},            // { qId: selectedOptionLabel }
+      startTime: null,
+      timerInterval: null,
+      durationSeconds: 0,
+      secondsLeft: 0,
+
+      // Security
+      tabSwitchCount: 0,
+      faceViolations: 0,
+      multiFaceViolations: 0,
+      burnedQuestionIds: [],
+      snapshotUrls: [],
+      audioUrl: '',
+      securityLog: [],
+
+      // Camera
+      stream: null,
+      mediaRecorder: null,
+      audioChunks: [],
+      faceApiLoaded: false,
+      trackingLoop: null,
+      lastViolationTs: 0,    // Debounce face violations
+      faceViolationCooldown: false,
+
+      showResult: true,
+      pointsPerQuestion: 1
+    };
+
+    // ─── UTILITY ────────────────────────────────────────────────
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(function (s) { s.classList.remove('active'); });
+      document.getElementById('screen-' + id).classList.add('active');
+    }
+
+    function log(msg) {
+      var ts = new Date().toLocaleTimeString();
+      STATE.securityLog.push('[' + ts + '] ' + msg);
+      console.log('[CBE] ' + msg);
+    }
+
+    function fmtTime(secs) {
+      var m = Math.floor(secs / 60), s = secs % 60;
+      return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    }
+
+    function getEl(id) { return document.getElementById(id); }
+
+    // ─── BOOT: load settings ─────────────────────────────────────
+    window.addEventListener('load', async function () {
+      try {
+        var r = await apiCall("getSettings");
+        if (!r.success) { alert('Failed to load settings: ' + r.error); return; }
+
+        STATE.settings = r.data;
+        STATE.showResult = (r.data['Show Result After submitting'] || '').toString().toLowerCase() === 'yes';
+        STATE.pointsPerQuestion = parseFloat(r.data['Points per Question']) || 1;
+        STATE.durationSeconds = (parseFloat(r.data['Duration (min)']) || 10) * 60;
+
+        // Update exam notice
+        function formatAMPM(timeStr) {
+          if (!timeStr) return '';
+          var parts = timeStr.split(':');
+          var hours = parseInt(parts[0], 10);
+          var minutes = parts[1] || '00';
+          var ampm = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12;
+          hours = hours ? hours : 12;
+          return hours + ':' + minutes + ' ' + ampm;
+        }
+
+        var notice = getEl('exam-notice');
+        notice.innerHTML = '<strong>📘 ' + (r.data['Quiz Name'] || 'Exam') + '</strong><br/>' +
+          'Date: <strong>' + (r.data['Date of Exam'] || 'N/A') + '</strong> | ' +
+          'Time: <strong>' + formatAMPM(r.data['Exam start Time']) + '–' + formatAMPM(r.data['Exam End Time']) + '</strong> | ' +
+          'Duration: <strong>' + (r.data['Duration (min)'] || '?') + ' min</strong>';
+
+        getEl('topbar-quiz-name').textContent = r.data['Quiz Name'] || 'CBE Exam';
+      } catch (e) {
+        alert('Settings error: ' + e.message);
+      }
+    });
+
+    // ─── SCREEN 1 → 2: VALIDATE LOGIN ───────────────────────────
+    async function proceedToInstructions() {
+      var name = getEl('input-name').value.trim();
+      var matric = getEl('input-matric').value.trim();
+      var email = getEl('input-email').value.trim();
+      if (!name || !matric || !email) { alert('Please fill in all fields.'); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Please enter a valid email address.'); return; }
+
+      var btn = document.querySelector('#screen-login .btn-primary');
+      var originalText = btn.innerHTML;
+      btn.innerHTML = '<span>Checking records...</span>';
+      btn.disabled = true;
+
+      if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === "YOUR_WEB_APP_URL_HERE") {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        alert("Developer: Please set APPS_SCRIPT_URL at the top of the Javascript.");
+        return;
+      }
+
+      try {
+        var r = await apiCall("checkIfStudentTookExam", { email: email });
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+
+        if (r.taken) {
+          alert('You have already submitted an exam. Access denied.');
+          return;
+        }
+        STATE.student = { name: name, matric: matric, email: email };
+        showScreen('instructions');
+      } catch (err) {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        alert('Error checking records: ' + err.message);
+      }
+    }
+
+    // ─── SCREEN 2 → 3: START EXAM ────────────────────────────────
+    async function startExam() {
+      getEl('loading-overlay').classList.add('show');
+
+      try {
+        var r = await apiCall("checkExamWindow");
+        if (!r.allowed) {
+          getEl('loading-overlay').classList.remove('show');
+          alert('Cannot start exam: ' + r.reason);
+          return;
+        }
+        await requestMediaAndStart();
+      } catch (err) {
+        getEl('loading-overlay').classList.remove('show');
+        alert('Failed to contact server: ' + err.message);
+      }
+    }
+
+    async function requestMediaAndStart() {
+      var videoMonitor = (STATE.settings['Video Monitoring'] || '').toString().toLowerCase() === 'yes';
+      var audioMonitor = (STATE.settings['Audio monitoring'] || '').toString().toLowerCase() === 'yes';
+
+      if (!videoMonitor && !audioMonitor) {
+        log('Camera & audio monitoring both disabled. Skipping media request.');
+        loadQuestionsAndBegin(false);
+        return;
+      }
+
+      var constraints = {
+        video: videoMonitor ? { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: 'user' } : false,
+        audio: audioMonitor
+      };
+
+      try {
+        STATE.stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        log('Combined media request failed: ' + err.name + ' - ' + err.message);
+
+        // Fallback: If both were requested, try getting just video (often microphones cause issues)
+        if (videoMonitor && audioMonitor) {
+          try {
+            log('Trying fallback: Video only');
+            STATE.stream = await navigator.mediaDevices.getUserMedia({ video: constraints.video, audio: false });
+            audioMonitor = false; // Disable audio since it failed
+          } catch (errVideo) {
+            log('Fallback Video failed: ' + errVideo.name);
+          }
+        }
+
+        if (!STATE.stream) {
+          var errName = err.name || 'Error';
+          var errMsg = err.message || 'Unknown error';
+
+          var helpText = '';
+          if (errName === 'NotAllowedError') {
+            helpText = 'Permission was denied. If you clicked "Allow", your OS (e.g. Windows Privacy Settings) might be blocking camera access, or your browser is restricting it.';
+          } else if (errName === 'NotFoundError') {
+            helpText = 'No camera or microphone was found on this device.';
+          } else if (errName === 'NotReadableError' || errName === 'TrackStartError') {
+            helpText = 'Your camera/microphone is currently in use by another application (e.g. Zoom, Chrome). Please close it and try again.';
+          } else if (errName === 'OverconstrainedError') {
+            helpText = 'Your camera does not support the requested resolution settings.';
+          } else {
+            helpText = 'Could not access media devices.';
+          }
+
+          var proceed = confirm(
+            '⚠️ Camera/Microphone Error: ' + errName + '\n\n' +
+            helpText + '\n\n' +
+            'Detailed error message: ' + errMsg + '\n\n' +
+            'The exam will start WITHOUT monitoring. This will be flagged in your report.\n\n' +
+            'Press OK to continue without monitoring, or Cancel to try again.'
+          );
+          if (proceed) {
+            log('MEDIA DENIED/FAILED: Exam started without camera/audio. Error: ' + errName + ' - ' + errMsg);
+            loadQuestionsAndBegin(false);
+          }
+          return;
+        }
+      }
+
+      // If we managed to get a stream successfully:
+      if (videoMonitor && STATE.stream.getVideoTracks().length > 0) {
+        var video = getEl('webcam');
+        video.srcObject = STATE.stream;
+      } else {
+        videoMonitor = false; // Turn off face tracking if no video tracks exist
+      }
+
+      if (audioMonitor && STATE.stream.getAudioTracks().length > 0) {
+        startAudioRecording(STATE.stream);
+      }
+
+      loadQuestionsAndBegin(videoMonitor);
+    }
+
+    // ─── AUDIO RECORDING ────────────────────────────────────────
+    function startAudioRecording(stream) {
+      try {
+        var audioStream = new MediaStream(stream.getAudioTracks());
+        STATE.mediaRecorder = new MediaRecorder(audioStream, { mimeType: 'audio/webm' });
+        STATE.mediaRecorder.ondataavailable = function (e) {
+          if (e.data && e.data.size > 0) STATE.audioChunks.push(e.data);
+        };
+        STATE.mediaRecorder.start(5000); // collect in 5-sec chunks
+        log('Audio recording started.');
+      } catch (e) { log('Audio recording failed: ' + e.message); }
+    }
+
+    // ─── LOAD QUESTIONS ──────────────────────────────────────────
+    async function loadQuestionsAndBegin(videoMonitor) {
+      var n = parseInt(STATE.settings['Questions to Pull']) || 10;
+      var shuffleQ = (STATE.settings['Shuffle Questions'] || 'No').toString();
+      var shuffleO = (STATE.settings['Shuffle Options'] || 'No').toString();
+
+      try {
+        var r = await apiCall("getQuestions", { n: n, shuffleQ: shuffleQ, shuffleO: shuffleO });
+        if (!r.success || !r.data || !r.data.length) {
+          alert('No questions found. Check the Questions sheet.');
+          return;
+        }
+
+        STATE.allQuestions = r.data;
+        STATE.examQuestions = STATE.allQuestions.splice(0, n);
+
+        showScreen('exam');
+        getEl('loading-overlay').classList.remove('show');
+        getEl('topbar-student').textContent = STATE.student.name + ' | ' + STATE.student.matric;
+        getEl('topbar-q-total').textContent = STATE.examQuestions.length;
+
+        beginTimer();
+        registerTabSwitch();
+        renderQuestion();
+
+        if (videoMonitor) { loadFaceApi(); }
+        else { getEl('camera-panel') && (document.querySelector('.camera-panel').style.display = 'none'); }
+      } catch (err) {
+        alert('Failed to load questions: ' + err.message);
+        getEl('loading-overlay').classList.remove('show');
+      }
+    }
+
+    // ─── TIMER ───────────────────────────────────────────────────
+    function beginTimer() {
+      STATE.startTime = new Date();
+      STATE.secondsLeft = STATE.durationSeconds;
+      updateTimerDisplay();
+      STATE.timerInterval = setInterval(function () {
+        STATE.secondsLeft--;
+        updateTimerDisplay();
+        if (STATE.secondsLeft <= 0) { clearInterval(STATE.timerInterval); autoSubmit('Time Up'); }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      var el = getEl('timer');
+      el.textContent = fmtTime(STATE.secondsLeft);
+      el.className = '';
+      if (STATE.secondsLeft <= 60 && STATE.secondsLeft > 30) el.classList.add('warning');
+      if (STATE.secondsLeft <= 30) el.classList.add('danger');
+    }
+
+    // ─── TAB SWITCH ──────────────────────────────────────────────
+    function registerTabSwitch() {
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+          STATE.tabSwitchCount++;
+          log('TAB SWITCH detected. Count: ' + STATE.tabSwitchCount);
+          triggerViolation('Tab Switch', '⚠️ Tab Switch Detected!',
+            'You switched away from the exam window. Your current question has been burned and replaced. This incident has been flagged and reported to the supervisor.', false);
+        }
+      });
+    }
+
+    // ─── FACE API ────────────────────────────────────────────────
+    function loadFaceApi() {
+      var MODEL_URL = 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights';
+      Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL)
+      ]).then(function () {
+        STATE.faceApiLoaded = true;
+        getEl('models-loading').style.display = 'none';
+        log('Face API models loaded.');
+        startFaceTracking();
+      }).catch(function (e) { log('Face API load error: ' + e.message); getEl('models-loading').textContent = '⚠️ Face AI unavailable'; });
+    }
+
+    function startFaceTracking() {
+      var video = getEl('webcam');
+      var canvas = getEl('faceCanvas');
+      var status = getEl('face-status');
+      var noFaceFrames = 0;
+
+      STATE.trackingLoop = setInterval(async function () {
+        if (!STATE.faceApiLoaded || video.readyState < 2) return;
+
+        canvas.width = video.videoWidth || 320;
+        canvas.height = video.videoHeight || 240;
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        var detections = await faceapi
+          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.4 }))
+          .withFaceLandmarks(true);
+
+        if (detections.length === 0) {
+          noFaceFrames++;
+          status.textContent = '🚫 No Face Detected';
+          status.className = 'face-status red';
+          if (noFaceFrames >= 5 && !STATE.faceViolationCooldown) {
+            noFaceFrames = 0;
+            STATE.faceViolations++;
+            log('FACE VIOLATION: No face detected. Count: ' + STATE.faceViolations);
+            triggerViolation('No Face', '📷 No Face Detected!',
+              'Your face was not visible on camera. Your current question has been burned and replaced. A snapshot has been taken and reported.', true);
+          }
+        } else if (detections.length >= 2) {
+          status.textContent = '👥 Multiple Faces!';
+          status.className = 'face-status red';
+          noFaceFrames = 0;
+          if (!STATE.faceViolationCooldown) {
+            STATE.multiFaceViolations++;
+            log('MULTI-FACE VIOLATION: ' + detections.length + ' faces detected. Count: ' + STATE.multiFaceViolations);
+            triggerViolation('Multi-Face', '👥 Multiple Faces Detected!',
+              'More than one face was detected. Only the registered student may be visible. Your question has been burned and a snapshot taken.', true);
+          }
+        } else {
+          noFaceFrames = 0;
+          var det = detections[0];
+          var box = det.detection.box;
+          var pts = det.landmarks.positions;
+          var imgW = canvas.width, imgH = canvas.height;
+
+          // Draw face box
+          var leftEye = det.landmarks.getLeftEye();
+          var rightEye = det.landmarks.getRightEye();
+          var eyesOk = checkEyesInBox(leftEye, rightEye, imgW, imgH);
+
+          ctx.strokeStyle = eyesOk ? '#00ff88' : '#ff4444';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+          // Eye tracking zone (centre 60% of frame)
+          var zoneX = imgW * 0.2, zoneY = imgH * 0.15, zoneW = imgW * 0.6, zoneH = imgH * 0.7;
+          ctx.strokeStyle = eyesOk ? '#00cc6655' : '#ff444455';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.strokeRect(zoneX, zoneY, zoneW, zoneH);
+          ctx.setLineDash([]);
+
+          if (!eyesOk && !STATE.faceViolationCooldown) {
+            STATE.faceViolations++;
+            log('EYE VIOLATION: Eyes outside tracking zone. Count: ' + STATE.faceViolations);
+            triggerViolation('Eye Out', '👁️ Eyes Outside Tracking Zone!',
+              'Your eyes left the tracking zone. Please keep your eyes on the screen at all times. Your question has been burned and replaced. A snapshot was taken.', true);
+          } else {
+            status.textContent = '✅ Face Detected';
+            status.className = 'face-status';
+          }
+        }
+        updateStats();
+      }, 500);
+    }
+
+    function checkEyesInBox(leftEye, rightEye, imgW, imgH) {
+      var zoneX1 = imgW * 0.2, zoneX2 = imgW * 0.8, zoneY1 = imgH * 0.15, zoneY2 = imgH * 0.85;
+      var allPts = leftEye.concat(rightEye);
+      return allPts.every(function (p) { return p.x >= zoneX1 && p.x <= zoneX2 && p.y >= zoneY1 && p.y <= zoneY2; });
+    }
+
+    // ─── VIOLATION HANDLER ───────────────────────────────────────
+    function triggerViolation(type, title, msg, takeSnapshot) {
+      getEl('violation-title').textContent = title;
+      getEl('violation-message').innerHTML = msg;
+      getEl('violation-count-display').textContent =
+        'Tab Switches: ' + STATE.tabSwitchCount + ' | Face Violations: ' + STATE.faceViolations +
+        ' | Multi-Face: ' + STATE.multiFaceViolations;
+      getEl('violation-overlay').classList.add('show');
+
+      burnAndReplaceQuestion();
+
+      if (takeSnapshot) { takeSnapshot_fn(); }
+
+      STATE.faceViolationCooldown = true;
+      setTimeout(function () { STATE.faceViolationCooldown = false; }, 8000);
+      updateStats();
+    }
+
+    function dismissViolation() {
+      getEl('violation-overlay').classList.remove('show');
+    }
+
+    // ─── BURN & REPLACE ──────────────────────────────────────────
+    function burnAndReplaceQuestion() {
+      if (STATE.currentIndex >= STATE.examQuestions.length) return;
+      var burned = STATE.examQuestions[STATE.currentIndex];
+      STATE.burnedQuestionIds.push(burned.id);
+      log('BURNED question ID: ' + burned.id);
+
+      if (STATE.allQuestions.length > 0) {
+        var replacement = STATE.allQuestions.shift();
+        STATE.examQuestions[STATE.currentIndex] = replacement;
+        delete STATE.answers[burned.id];
+        renderQuestion();
+        getEl('stat-burned').textContent = STATE.burnedQuestionIds.length;
+        log('REPLACED with question ID: ' + replacement.id);
+      } else {
+        log('No replacement question available in pool.');
+        alert('Warning: A violation occurred, but no replacement questions are left in the bank! Your question remains unchanged.');
+      }
+    }
+
+    // ─── TAKE SNAPSHOT ───────────────────────────────────────────
+    async function takeSnapshot_fn() {
+      try {
+        var video = getEl('webcam');
+        var c = document.createElement('canvas');
+        c.width = video.videoWidth || 320;
+        c.height = video.videoHeight || 240;
+        c.getContext('2d').drawImage(video, 0, 0, c.width, c.height);
+        var base64 = c.toDataURL('image/png');
+
+        var r = await apiCall("saveSnapshot", { base64Data: base64, studentName: STATE.student.name });
+        if (r.success) {
+          STATE.snapshotUrls.push(r.url);
+          log('Snapshot saved: ' + r.url);
+        }
+      } catch (e) {
+        log('Snapshot error: ' + e.message);
+      }
+    }
+
+    // ─── RENDER QUESTION ─────────────────────────────────────────
+    function renderQuestion() {
+      var q = STATE.examQuestions[STATE.currentIndex];
+      var total = STATE.examQuestions.length;
+      getEl('q-number').textContent = 'Question ' + (STATE.currentIndex + 1) + ' of ' + total;
+      getEl('q-text').textContent = q.question;
+      getEl('topbar-q-num').textContent = STATE.currentIndex + 1;
+
+      var answered = Object.keys(STATE.answers).length;
+      getEl('q-answered').textContent = answered;
+      getEl('q-progress-fill').style.width = ((answered / total) * 100) + '%';
+
+      var container = getEl('options-container');
+      container.innerHTML = '';
+
+      if (q.type === 'fill-in') {
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'fill-in-input';
+        input.placeholder = 'Type your answer here...';
+        if (STATE.answers[q.id]) {
+          input.value = STATE.answers[q.id];
+        }
+        input.oninput = function () {
+          if (this.value.trim() === '') {
+            delete STATE.answers[q.id];
+          } else {
+            STATE.answers[q.id] = this.value;
+          }
+          var answered = Object.keys(STATE.answers).length;
+          getEl('q-answered').textContent = answered;
+          getEl('q-progress-fill').style.width = ((answered / total) * 100) + '%';
+        };
+        container.appendChild(input);
+      } else {
+        q.options.forEach(function (opt) {
+          if (!opt.text) return;
+          var btn = document.createElement('button');
+          btn.className = 'option-btn' + (STATE.answers[q.id] === opt.label ? ' selected' : '');
+          btn.innerHTML = '<span class="opt-label">' + opt.label + '</span><span>' + opt.text + '</span>';
+          btn.onclick = function () { selectOption(q.id, opt.label, btn); };
+          container.appendChild(btn);
+        });
+      }
+
+      var isFirst = STATE.currentIndex === 0;
+      var isLast = STATE.currentIndex === total - 1;
+      getEl('btn-prev').style.display = isFirst ? 'none' : 'inline-flex';
+      getEl('btn-next').style.display = isLast ? 'none' : 'inline-flex';
+      getEl('btn-submit').style.display = isLast ? 'inline-flex' : 'none';
+    }
+
+    function selectOption(qId, label, btn) {
+      STATE.answers[qId] = label;
+      document.querySelectorAll('.option-btn').forEach(function (b) { b.classList.remove('selected'); });
+      btn.classList.add('selected');
+      var answered = Object.keys(STATE.answers).length;
+      var total = STATE.examQuestions.length;
+      getEl('q-answered').textContent = answered;
+      getEl('q-progress-fill').style.width = ((answered / total) * 100) + '%';
+    }
+
+    function previousQuestion() {
+      if (STATE.currentIndex > 0) {
+        STATE.currentIndex--;
+        renderQuestion();
+      }
+    }
+
+    function nextQuestion() {
+      if (STATE.currentIndex < STATE.examQuestions.length - 1) {
+        STATE.currentIndex++;
+        renderQuestion();
+      }
+    }
+
+    // ─── STATS UPDATE ────────────────────────────────────────────
+    function updateStats() {
+      getEl('stat-tab').textContent = STATE.tabSwitchCount;
+      getEl('stat-face').textContent = STATE.faceViolations;
+      getEl('stat-mface').textContent = STATE.multiFaceViolations;
+      getEl('stat-burned').textContent = STATE.burnedQuestionIds.length;
+    }
+
+    // ─── SUBMIT ──────────────────────────────────────────────────
+    function showSubmitConfirm() { getEl('submit-overlay').classList.add('show'); }
+
+    function autoSubmit(reason) {
+      log('AUTO-SUBMITTED: ' + reason);
+      submitExamFinal(reason || 'Auto-Submitted');
+    }
+
+    function submitExamFinal(status) {
+      getEl('submit-overlay').classList.remove('show');
+      clearInterval(STATE.timerInterval);
+      if (STATE.trackingLoop) clearInterval(STATE.trackingLoop);
+
+      var endTime = new Date();
+      var elapsed = Math.floor((endTime - STATE.startTime) / 1000);
+      var timeTaken = fmtTime(elapsed);
+
+      // Score calculation
+      var score = 0;
+      STATE.examQuestions.forEach(function (q) {
+        if (STATE.answers[q.id]) {
+          if (q.type === 'fill-in') {
+            var ans = STATE.answers[q.id].toString().trim().toLowerCase();
+            var correct = (q.correctText || '').toString().trim().toLowerCase();
+            if (ans === correct && correct !== '') {
+              score += STATE.pointsPerQuestion;
+            }
+          } else {
+            if (STATE.answers[q.id] === q.correctLetter) score += STATE.pointsPerQuestion;
+          }
+        }
+      });
+
+      var payload = {
+        studentName: STATE.student.name,
+        matricNumber: STATE.student.matric,
+        studentEmail: STATE.student.email,
+        totalScore: score,
+        totalQuestions: STATE.examQuestions.length,
+        pointsPerQuestion: STATE.pointsPerQuestion,
+        timeTaken: timeTaken,
+        tabSwitchCount: STATE.tabSwitchCount,
+        faceViolations: STATE.faceViolations,
+        multiFaceViolations: STATE.multiFaceViolations,
+        burnedQuestionIds: STATE.burnedQuestionIds,
+        snapshotUrls: STATE.snapshotUrls,
+        audioUrl: STATE.audioUrl,
+        securityLog: STATE.securityLog.join('\n'),
+        examStatus: (typeof status === 'string' ? status : 'Completed')
+      };
+
+      // Show upload overlay
+      var upOverlay = getEl('upload-progress-overlay');
+      upOverlay.classList.add('show');
+
+      // Stop audio recorder and upload
+      var audioMonitor = (STATE.settings['Audio monitoring'] || '').toString().toLowerCase() === 'yes';
+      if (audioMonitor && STATE.mediaRecorder && STATE.mediaRecorder.state !== 'inactive') {
+        getEl('upload-status-text').textContent = '📤 Uploading audio recording…';
+        STATE.mediaRecorder.onstop = function () {
+          var blob = new Blob(STATE.audioChunks, { type: 'audio/webm' });
+          var reader = new FileReader();
+          reader.onload = async function () {
+            try {
+              var r = await apiCall("saveAudio", { base64Data: reader.result, studentName: STATE.student.name });
+              if (r.success) payload.audioUrl = r.url;
+            } catch (e) { log('Audio upload failed.'); }
+            writeRecord(payload, upOverlay, score, timeTaken, status);
+          };
+          reader.readAsDataURL(blob);
+        };
+        STATE.mediaRecorder.stop();
+      } else {
+        writeRecord(payload, upOverlay, score, timeTaken, status);
+      }
+
+      // Stop camera
+      if (STATE.stream) STATE.stream.getTracks().forEach(function (t) { t.stop(); });
+    }
+
+    async function writeRecord(payload, upOverlay, score, timeTaken, status) {
+      getEl('upload-status-text').textContent = '💾 Saving results to spreadsheet…';
+      try {
+        await apiCall("submitExam", { payload: payload });
+        upOverlay.classList.remove('show');
+        showResultScreen(score, timeTaken, typeof status === 'string' ? status : 'Completed');
+      } catch (e) {
+        upOverlay.classList.remove('show');
+        alert('Submission error: ' + e.message + '\nPlease contact admin immediately.');
+      }
+    }
+
+    // ─── RESULT SCREEN ───────────────────────────────────────────
+    function showResultScreen(score, timeTaken, status) {
+      if (!STATE.showResult) { document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-size:1.2rem;font-family:Inter,sans-serif;color:#e6edf3;background:#0d1117;">✅ Exam submitted successfully. You may close this window.</div>'; return; }
+
+      var total = STATE.examQuestions.length;
+      var maxScore = total * STATE.pointsPerQuestion;
+      var pct = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
+
+      getEl('res-percentage').textContent = pct + '%';
+      getEl('res-score').textContent = score + ' / ' + maxScore;
+      getEl('res-total-q').textContent = total;
+      getEl('res-time').textContent = timeTaken;
+      getEl('res-status').textContent = status;
+      getEl('res-tabs').textContent = STATE.tabSwitchCount;
+      getEl('res-violations').textContent = STATE.faceViolations + STATE.multiFaceViolations;
+
+      if (STATE.securityLog.length) {
+        getEl('result-log-section').style.display = 'block';
+        getEl('result-log').textContent = STATE.securityLog.join('\n');
+      }
+
+      showScreen('result');
+    }
+  </script>
+</body>
+
+</html>
