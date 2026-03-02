@@ -445,41 +445,6 @@
     }
 
     /* ─── NEW AI VISUAL FEEDBACK OVERLAYS ─── */
-    .ai-badge {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 0.65rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      z-index: 10;
-      transition: background 0.3s;
-    }
-
-    .ai-badge.loading {
-      background: rgba(255, 170, 0, 0.8);
-      color: #000;
-      animation: pulse-orange 1s infinite alternate;
-    }
-
-    .ai-badge.active {
-      background: rgba(0, 204, 102, 0.8);
-      color: #fff;
-    }
-
-    @keyframes pulse-orange {
-      0% {
-        opacity: 1;
-      }
-
-      100% {
-        opacity: 0.6;
-      }
-    }
-
     .eye-box {
       position: absolute;
       top: 8px;
@@ -495,6 +460,30 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
       transition: all 0.2s;
       white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .eye-box.loading {
+      background: rgba(255, 170, 0, 0.8);
+      color: #000;
+      animation: pulse-orange 1s infinite alternate;
+    }
+
+    .eye-box.active {
+      background: rgba(0, 204, 102, 0.8);
+      color: #fff;
+    }
+
+    @keyframes pulse-orange {
+      0% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0.6;
+      }
     }
 
     .eye-box.looking {
@@ -1042,7 +1031,7 @@
         style="margin-top: 10px; display: flex; align-items: flex-start; gap: 10px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
         <input type="checkbox" id="terms-checkbox" style="margin-top: 4px; cursor: pointer; width: 18px; height: 18px;">
         <label for="terms-checkbox" style="font-size: 0.85rem; color: var(--muted); cursor: pointer; line-height: 1.4;">
-          I accept the <strong>Terms and Conditions</strong> and explicitly explicitly consent to my environment being
+          I accept the <strong>Terms and Conditions</strong> and explicitly consent to my environment being
           actively monitored via <strong>camera and microphone recording</strong> for the duration of this exam.
         </label>
       </div>
@@ -1091,11 +1080,6 @@
         <strong>Microphone</strong>. You <strong>must</strong> allow these to proceed. Denying access will prevent you
         from starting the exam.
       </div>
-      <div class="permission-notice">
-        ⚠️ Clicking <strong>"Start Exam"</strong> will request access to your <strong>Camera</strong> and
-        <strong>Microphone</strong>. You <strong>must</strong> allow these to proceed. Denying access will prevent you
-        from starting the exam.
-      </div>
       <div style="display: flex; gap: 10px; margin-top: 20px;">
         <button class="btn btn-secondary" onclick="showScreen('login')"
           style="flex: 1; background: var(--surface2); color: var(--text);">
@@ -1132,8 +1116,7 @@
           <video id="webcam" autoplay muted playsinline></video>
           <canvas id="faceCanvas"></canvas>
           <div class="passport-guide"></div>
-          <div id="ai-status-badge" class="ai-badge loading">LOADING</div>
-          <div id="eye-box" class="eye-box looking" style="display:none;">LOOKING</div>
+          <div id="eye-box" class="eye-box loading"><span style="color:#ffaa00;">●</span> LOADING AI</div>
         </div>
         <div class="camera-stats" style="margin-top: 10px;">
           <div class="stat-row"><span>Tab Switches</span> <span id="stat-tab" class="bad">0</span></div>
@@ -1265,7 +1248,7 @@
   <script>
     // ─── CONFIGURATION ──────────────────────────────────────────
     // Replace this URL with your actual Google Apps Script Web App URL
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzV7-4rbtR1KX9Tf4st8BZZWRbr4uKb_0bt2l0zO4qjxhYHz5gTON9RkBTaXYOFSNkIvw/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzV7-4rbtR1KX9Tf4st8BZZWRbr4uKb_0bt2l0zO4qjxhYHz5gTON9RkBTXAYOFSNkIvw/exec";
 
     async function apiCall(action, data = {}) {
       try {
@@ -1508,7 +1491,7 @@
 
         // Block start until AI finishes loading and validates face
         getEl('loading-overlay').innerHTML = `
-          <div class="loader-spinner"></div>
+          <div class="up-spinner"></div>
           <h2 style="font-size: 1.2rem; color: var(--primary);">Initializing Proctored Session</h2>
           <p style="color:var(--muted); font-size:0.9rem; margin-top:8px;">Running local FaceAPI checks. Please look at the camera.</p>
         `;
@@ -1527,15 +1510,22 @@
 
     // ─── AUDIO RECORDING ────────────────────────────────────────
     function startAudioRecording(stream) {
+      if (!window.MediaRecorder) { log('Audio: MediaRecorder not supported.'); return; }
       try {
-        var audioStream = new MediaStream(stream.getAudioTracks());
-        STATE.mediaRecorder = new MediaRecorder(audioStream, { mimeType: 'audio/webm' });
+        // High compression to fix extremely large mobile upload times issue
+        STATE.mediaRecorder = new MediaRecorder(stream, {
+          audioBitsPerSecond: 16000 // Voice quality, tiny file size
+        });
+
         STATE.mediaRecorder.ondataavailable = function (e) {
-          if (e.data && e.data.size > 0) STATE.audioChunks.push(e.data);
+          if (e.data && e.data.size > 0) { STATE.audioChunks.push(e.data); }
         };
-        STATE.mediaRecorder.start(5000); // collect in 5-sec chunks
-        log('Audio recording started.');
-      } catch (e) { log('Audio recording failed: ' + e.message); }
+        STATE.mediaRecorder.onstart = function () { log('Audio recording STARTED.'); };
+        STATE.mediaRecorder.onerror = function (err) { log('Audio recorder error: ' + err.message); };
+        STATE.mediaRecorder.start();
+      } catch (err) {
+        log('Error starting audio rec: ' + err.message);
+      }
     }
 
     // ─── LOAD QUESTIONS ──────────────────────────────────────────
@@ -1617,13 +1607,11 @@
       ]).then(function () {
         STATE.faceApiLoaded = true;
 
-        var badge = getEl('ai-status-badge');
-        if (badge) {
-          badge.className = 'ai-badge active';
-          badge.textContent = 'AI ACTIVE';
+        var eyeBox = getEl('eye-box');
+        if (eyeBox) {
+          eyeBox.innerHTML = '<span style="color:#ff4444;">●</span> REC LOOKING';
+          eyeBox.className = 'eye-box looking';
         }
-
-        getEl('eye-box').style.display = 'block'; // Show eye tracking box
 
         log('Face API models loaded.');
 
@@ -1637,11 +1625,10 @@
 
       }).catch(function (e) {
         log('Face API load error: ' + e.message);
-        var badge = getEl('ai-status-badge');
-        if (badge) {
-          badge.className = 'ai-badge loading';
-          badge.style.background = 'rgba(218, 54, 51, 0.9)';
-          badge.textContent = 'ERROR';
+        var eyeBox = getEl('eye-box');
+        if (eyeBox) {
+          eyeBox.className = 'eye-box distracted';
+          eyeBox.textContent = 'ERROR';
         }
         // Force start exam anyway if AI totally fails so student isn't stuck forever
         if (onReadyCallback) onReadyCallback();
@@ -1673,7 +1660,7 @@
           noFaceFrames++;
           distractedFrames = 0; // Reset distracted if there's no face at all
 
-          eyeBox.textContent = 'NO FACE';
+          eyeBox.innerHTML = '<span style="color:#fff;">●</span> REC NO FACE';
           eyeBox.className = 'eye-box no-face';
 
           if (noFaceFrames >= REQUIRED_FRAMES && !STATE.faceViolationCooldown) {
@@ -1684,7 +1671,7 @@
           noFaceFrames = 0;
           distractedFrames = 0;
 
-          eyeBox.textContent = '2+ FACES';
+          eyeBox.innerHTML = '<span style="color:#ff4444;">●</span> REC 2+ FACES';
           eyeBox.className = 'eye-box multi-face';
 
           if (!STATE.faceViolationCooldown) {
@@ -1705,13 +1692,25 @@
           var rightEye = det.landmarks.getRightEye();
           var eyesOk = checkEyesInBox(leftEye, rightEye, imgW, imgH);
 
-          // We don't draw the boxes heavily anymore, keeps video clean
+          // Draw eyes box dynamically to show tracking inside the passport ring
+          if (leftEye && rightEye && leftEye.length > 0 && rightEye.length > 0) {
+            var allEyes = leftEye.concat(rightEye);
+            var minX = Math.min(...allEyes.map(p => p.x));
+            var maxX = Math.max(...allEyes.map(p => p.x));
+            var minY = Math.min(...allEyes.map(p => p.y));
+            var maxY = Math.max(...allEyes.map(p => p.y));
+
+            ctx.strokeStyle = eyesOk ? '#00cc66' : '#ff4444';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(minX - 10, minY - 10, (maxX - minX) + 20, (maxY - minY) + 20);
+          }
+
           // Eye tracking zone (centre 60% of frame)
           var zoneX = imgW * 0.2, zoneY = imgH * 0.15, zoneW = imgW * 0.6, zoneH = imgH * 0.7;
 
           if (!eyesOk) {
             distractedFrames++;
-            eyeBox.textContent = 'DISTRACTED';
+            eyeBox.innerHTML = '<span style="color:#fff;">●</span> REC DISTRACTED';
             eyeBox.className = 'eye-box distracted';
 
             if (distractedFrames >= REQUIRED_FRAMES && !STATE.faceViolationCooldown) {
@@ -1720,7 +1719,7 @@
             }
           } else {
             distractedFrames = 0; // User looked back, reset grace period
-            eyeBox.textContent = 'LOOKING';
+            eyeBox.innerHTML = '<span style="color:#ff4444;">●</span> REC LOOKING';
             eyeBox.className = 'eye-box looking';
           }
         }
@@ -1733,7 +1732,7 @@
       log('WARNING TRIGGERED: ' + title + ' Count: ' + STATE.warningCount);
 
       var eyeBox = getEl('eye-box');
-      eyeBox.textContent = 'WARNING ' + STATE.warningCount + '/3';
+      eyeBox.innerHTML = '<span style="color:#ff4444;">●</span> REC WARNING ' + STATE.warningCount + '/3';
       eyeBox.className = 'eye-box warning-count';
 
       if (STATE.warningCount >= 3) {
