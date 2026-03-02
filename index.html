@@ -349,6 +349,12 @@
       align-items: center;
       padding: 20px 16px;
       gap: 14px;
+
+      /* Make sticky on desktop */
+      position: sticky;
+      top: 0;
+      height: fit-content;
+      max-height: calc(100vh - 64px);
     }
 
     .camera-panel h3 {
@@ -476,13 +482,14 @@
 
     .eye-box {
       position: absolute;
-      bottom: 8px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 6px 16px;
-      border-radius: 12px;
-      font-size: 0.75rem;
-      font-weight: 700;
+      top: 8px;
+      /* Move from bottom to top-left for compactness */
+      left: 8px;
+      transform: none;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.65rem;
+      font-weight: 800;
       text-align: center;
       z-index: 10;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
@@ -506,15 +513,33 @@
       color: #fff;
     }
 
+    .eye-box.warning-count {
+      background: rgba(255, 170, 0, 0.9);
+      color: #000;
+    }
+
     .eye-box.multi-face {
       background: rgba(255, 140, 0, 0.9);
       color: #000;
     }
 
+    /* Passport Guide Overlay */
+    .passport-guide {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 140px;
+      height: 190px;
+      border: 2px dashed rgba(255, 255, 255, 0.4);
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      pointer-events: none;
+      z-index: 5;
+    }
+
     /* Question panel */
     .question-panel {
       flex: 1;
-      overflow-y: auto;
       padding: 24px 32px;
       display: flex;
       flex-direction: column;
@@ -1013,10 +1038,25 @@
         <input type="email" id="input-email" placeholder="e.g. john@university.edu" autocomplete="email" />
       </div>
 
-      <button class="btn btn-primary" onclick="proceedToInstructions()">
-        <span>Proceed to Instructions</span>
-        <span>→</span>
-      </button>
+      <div class="form-group"
+        style="margin-top: 10px; display: flex; align-items: flex-start; gap: 10px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+        <input type="checkbox" id="terms-checkbox" style="margin-top: 4px; cursor: pointer; width: 18px; height: 18px;">
+        <label for="terms-checkbox" style="font-size: 0.85rem; color: var(--muted); cursor: pointer; line-height: 1.4;">
+          I accept the <strong>Terms and Conditions</strong> and explicitly explicitly consent to my environment being
+          actively monitored via <strong>camera and microphone recording</strong> for the duration of this exam.
+        </label>
+      </div>
+
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="showScreen('instructions')"
+          style="flex: 1; background: var(--surface2); color: var(--text);">
+          <span>Read Instructions</span>
+        </button>
+        <button class="btn btn-primary" onclick="proceedToInstructions()" style="flex: 2;">
+          <span>Proceed</span>
+          <span>→</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1051,9 +1091,20 @@
         <strong>Microphone</strong>. You <strong>must</strong> allow these to proceed. Denying access will prevent you
         from starting the exam.
       </div>
-      <button class="btn btn-primary" onclick="startExam()">
-        <span>🎯 Start Exam</span>
-      </button>
+      <div class="permission-notice">
+        ⚠️ Clicking <strong>"Start Exam"</strong> will request access to your <strong>Camera</strong> and
+        <strong>Microphone</strong>. You <strong>must</strong> allow these to proceed. Denying access will prevent you
+        from starting the exam.
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="showScreen('login')"
+          style="flex: 1; background: var(--surface2); color: var(--text);">
+          <span>← Back to Login</span>
+        </button>
+        <button class="btn btn-primary" onclick="verifyAndStartExam()" style="flex: 2;">
+          <span>🎯 Start Exam</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1080,11 +1131,14 @@
         <div class="camera-container">
           <video id="webcam" autoplay muted playsinline></video>
           <canvas id="faceCanvas"></canvas>
+          <div class="passport-guide"></div>
           <div id="ai-status-badge" class="ai-badge loading">LOADING</div>
           <div id="eye-box" class="eye-box looking" style="display:none;">LOOKING</div>
         </div>
         <div class="camera-stats" style="margin-top: 10px;">
           <div class="stat-row"><span>Tab Switches</span> <span id="stat-tab" class="bad">0</span></div>
+          <div class="stat-row"><span>Warnings</span> <span id="stat-warnings" class="bad"
+              style="color:var(--warning)">0</span></div>
           <div class="stat-row"><span>Face Violations</span> <span id="stat-face" class="bad">0</span></div>
           <div class="stat-row"><span>Multi-Face</span> <span id="stat-mface" class="bad">0</span></div>
           <div class="stat-row"><span>Qs Burned</span> <span id="stat-burned" class="bad">0</span></div>
@@ -1320,8 +1374,11 @@
       var name = getEl('input-name').value.trim();
       var matric = getEl('input-matric').value.trim();
       var email = getEl('input-email').value.trim();
+      var terms = getEl('terms-checkbox').checked;
+
       if (!name || !matric || !email) { alert('Please fill in all fields.'); return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Please enter a valid email address.'); return; }
+      if (!terms) { alert('You must accept the Terms and Conditions and Camera Consent to proceed.'); return; }
 
       var btn = document.querySelector('#screen-login .btn-primary');
       var originalText = btn.innerHTML;
@@ -1354,6 +1411,16 @@
     }
 
     // ─── SCREEN 2 → 3: START EXAM ────────────────────────────────
+    async function verifyAndStartExam() {
+      // If they somehow skipped the login payload (e.g. they just clicked Read Instructions)
+      if (!STATE.student || !STATE.student.email) {
+        alert("Please complete the setup form on the Login page first.");
+        showScreen('login');
+        return;
+      }
+      return startExam();
+    }
+
     async function startExam() {
       getEl('loading-overlay').classList.add('show');
 
@@ -1437,16 +1504,25 @@
       // If we managed to get a stream successfully:
       if (videoMonitor && STATE.stream.getVideoTracks().length > 0) {
         var video = getEl('webcam');
-        video.srcObject = STATE.stream;
+        getEl('webcam').srcObject = STATE.stream;
+
+        // Block start until AI finishes loading and validates face
+        getEl('loading-overlay').innerHTML = `
+          <div class="loader-spinner"></div>
+          <h2 style="font-size: 1.2rem; color: var(--primary);">Initializing Proctored Session</h2>
+          <p style="color:var(--muted); font-size:0.9rem; margin-top:8px;">Running local FaceAPI checks. Please look at the camera.</p>
+        `;
+        loadFaceApi(function onSystemReady() {
+          loadQuestionsAndBegin(true);
+        });
       } else {
-        videoMonitor = false; // Turn off face tracking if no video tracks exist
+        // No video monitoring required, just load questions immediately
+        loadQuestionsAndBegin(false);
       }
 
       if (audioMonitor && STATE.stream.getAudioTracks().length > 0) {
         startAudioRecording(STATE.stream);
       }
-
-      loadQuestionsAndBegin(videoMonitor);
     }
 
     // ─── AUDIO RECORDING ────────────────────────────────────────
@@ -1487,8 +1563,11 @@
         registerTabSwitch();
         renderQuestion();
 
-        if (videoMonitor) { loadFaceApi(); }
-        else { getEl('camera-panel') && (document.querySelector('.camera-panel').style.display = 'none'); }
+        // if (videoMonitor) { loadFaceApi(); }
+        // The FaceAPI is now bootstrapped before this function even fires!
+        if (!videoMonitor) {
+          getEl('camera-panel') && (document.querySelector('.camera-panel').style.display = 'none');
+        }
       } catch (err) {
         alert('Failed to load questions: ' + err.message);
         getEl('loading-overlay').classList.remove('show');
@@ -1528,7 +1607,7 @@
     }
 
     // ─── FACE API ────────────────────────────────────────────────
-    function loadFaceApi() {
+    function loadFaceApi(onReadyCallback) {
       // Switched from jsdelivr to the official face-api.js models GitHub Pages host 
       // because JSDelivr sometimes blocks or errors out on certain networks/mobile
       var MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
@@ -1547,7 +1626,15 @@
         getEl('eye-box').style.display = 'block'; // Show eye tracking box
 
         log('Face API models loaded.');
+
+        // Let it start tracking first
         startFaceTracking();
+
+        // Delay 1.5 seconds for hardware to lock on before removing overlay
+        if (onReadyCallback) {
+          setTimeout(onReadyCallback, 1500);
+        }
+
       }).catch(function (e) {
         log('Face API load error: ' + e.message);
         var badge = getEl('ai-status-badge');
@@ -1556,6 +1643,8 @@
           badge.style.background = 'rgba(218, 54, 51, 0.9)';
           badge.textContent = 'ERROR';
         }
+        // Force start exam anyway if AI totally fails so student isn't stuck forever
+        if (onReadyCallback) onReadyCallback();
       });
     }
 
@@ -1566,6 +1655,7 @@
 
       var noFaceFrames = 0;
       var distractedFrames = 0; // New tracker for distracted states
+      var REQUIRED_FRAMES = 10; // 500ms intervals = 5 seconds
 
       STATE.trackingLoop = setInterval(async function () {
         if (!STATE.faceApiLoaded || video.readyState < 2) return;
@@ -1586,12 +1676,9 @@
           eyeBox.textContent = 'NO FACE';
           eyeBox.className = 'eye-box no-face';
 
-          if (noFaceFrames >= 5 && !STATE.faceViolationCooldown) {
+          if (noFaceFrames >= REQUIRED_FRAMES && !STATE.faceViolationCooldown) {
             noFaceFrames = 0;
-            STATE.faceViolations++;
-            log('FACE VIOLATION: No face detected. Count: ' + STATE.faceViolations);
-            triggerViolation('No Face', '📷 No Face Detected!',
-              'Your face was not visible on camera. Your current question has been burned and replaced. A snapshot has been taken and reported.', true);
+            processStrike('📷 No Face Detected!', 'Your face was not visible on camera for 5 seconds.');
           }
         } else if (detections.length >= 2) {
           noFaceFrames = 0;
@@ -1613,34 +1700,23 @@
           var pts = det.landmarks.positions;
           var imgW = canvas.width, imgH = canvas.height;
 
-          // Draw face box
+          // Eye tracking logic
           var leftEye = det.landmarks.getLeftEye();
           var rightEye = det.landmarks.getRightEye();
           var eyesOk = checkEyesInBox(leftEye, rightEye, imgW, imgH);
 
-          ctx.strokeStyle = eyesOk ? '#00ff88' : '#ff4444';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(box.x, box.y, box.width, box.height);
-
+          // We don't draw the boxes heavily anymore, keeps video clean
           // Eye tracking zone (centre 60% of frame)
           var zoneX = imgW * 0.2, zoneY = imgH * 0.15, zoneW = imgW * 0.6, zoneH = imgH * 0.7;
-          ctx.strokeStyle = eyesOk ? '#00cc6655' : '#ff444455';
-          ctx.lineWidth = 1;
-          ctx.setLineDash([4, 4]);
-          ctx.strokeRect(zoneX, zoneY, zoneW, zoneH);
-          ctx.setLineDash([]);
 
           if (!eyesOk) {
             distractedFrames++;
             eyeBox.textContent = 'DISTRACTED';
             eyeBox.className = 'eye-box distracted';
 
-            if (distractedFrames >= 5 && !STATE.faceViolationCooldown) {
+            if (distractedFrames >= REQUIRED_FRAMES && !STATE.faceViolationCooldown) {
               distractedFrames = 0;
-              STATE.faceViolations++;
-              log('EYE VIOLATION: Eyes outside tracking zone for 5 checks. Count: ' + STATE.faceViolations);
-              triggerViolation('Eye Out', '👁️ Eyes Outside Tracking Zone!',
-                'You were looking away from the screen for too long. Your question has been burned and replaced. A snapshot was taken.', true);
+              processStrike('👁️ Eyes Outside Tracking Zone!', 'You were looking away from the screen for 5 seconds.');
             }
           } else {
             distractedFrames = 0; // User looked back, reset grace period
@@ -1650,6 +1726,35 @@
         }
         updateStats();
       }, 500);
+    }
+
+    function processStrike(title, msgLabel) {
+      STATE.warningCount++;
+      log('WARNING TRIGGERED: ' + title + ' Count: ' + STATE.warningCount);
+
+      var eyeBox = getEl('eye-box');
+      eyeBox.textContent = 'WARNING ' + STATE.warningCount + '/3';
+      eyeBox.className = 'eye-box warning-count';
+
+      if (STATE.warningCount >= 3) {
+        // Reset warnings but trigger a hard violation
+        STATE.warningCount = 0;
+        STATE.faceViolations++;
+        log('3 STRIKES MET: Burning question.');
+        triggerViolation('Strike Penalty', title,
+          msgLabel + ' You have accumulated 3 warnings! A violation has been logged and your specific question has been burned and replaced. A snapshot was taken.', true);
+      } else {
+        // Just show a soft warning overlay, no burn
+        getEl('violation-title').textContent = title;
+        getEl('violation-message').innerHTML = msgLabel + '<br/><br/><strong>Warning ' + STATE.warningCount + ' of 3.</strong><br/>If you reach 3 warnings, your question will be permanently deleted and replaced with a new one.';
+        getEl('violation-count-display').textContent = 'Warning Strike Logged.';
+        getEl('violation-overlay').classList.add('show');
+
+        takeSnapshot_fn(); // Log the context internally
+
+        STATE.faceViolationCooldown = true;
+        setTimeout(function () { STATE.faceViolationCooldown = false; }, 4000); // 4 sec timeout
+      }
     }
 
     function checkEyesInBox(leftEye, rightEye, imgW, imgH) {
@@ -1799,6 +1904,7 @@
     // ─── STATS UPDATE ────────────────────────────────────────────
     function updateStats() {
       getEl('stat-tab').textContent = STATE.tabSwitchCount;
+      getEl('stat-warnings').textContent = STATE.warningCount;
       getEl('stat-face').textContent = STATE.faceViolations;
       getEl('stat-mface').textContent = STATE.multiFaceViolations;
       getEl('stat-burned').textContent = STATE.burnedQuestionIds.length;
@@ -1922,4 +2028,4 @@
   </script>
 </body>
 
-</html>
+</html>8f
