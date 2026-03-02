@@ -1246,9 +1246,8 @@
      JAVASCRIPT
 ════════════════════════════════════════════════ -->
   <script>
-    // ─── CONFIGURATION ──────────────────────────────────────────
     // Replace this URL with your actual Google Apps Script Web App URL
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzV7-4rbtR1KX9Tf4st8BZZWRbr4uKb_0bt2l0zO4qjxhYHz5gTON9RkBTXAYOFSNkIvw/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzV7-4rbtR1KX9Tf4st8BZZWRbr4uKb_0bt2l0zO4qjxhYHz5gTON9RkBTaXYOFSNkIvw/exec";
 
     async function apiCall(action, data = {}) {
       try {
@@ -1513,9 +1512,14 @@
       if (!window.MediaRecorder) { log('Audio: MediaRecorder not supported.'); return; }
       try {
         // High compression to fix extremely large mobile upload times issue
-        STATE.mediaRecorder = new MediaRecorder(stream, {
-          audioBitsPerSecond: 16000 // Voice quality, tiny file size
-        });
+        try {
+          STATE.mediaRecorder = new MediaRecorder(stream, {
+            audioBitsPerSecond: 16000 // Voice quality, tiny file size
+          });
+        } catch (mediaErr) {
+          log('Audio: Custom bitrate unsupported. Falling back to default.');
+          STATE.mediaRecorder = new MediaRecorder(stream);
+        }
 
         STATE.mediaRecorder.ondataavailable = function (e) {
           if (e.data && e.data.size > 0) { STATE.audioChunks.push(e.data); }
