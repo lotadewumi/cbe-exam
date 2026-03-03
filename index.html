@@ -520,7 +520,7 @@
       transform: translate(-50%, -50%);
       width: 130px;
       height: 160px;
-      border: 2px dashed rgba(255, 255, 255, 0.4);
+      border: 3px dashed rgba(0, 204, 255, 0.7);
       border-radius: 8px;
       /* Changed to a rounded rectangle */
       pointer-events: none;
@@ -1649,7 +1649,9 @@
 
       var noFaceFrames = 0;
       var distractedFrames = 0; // New tracker for distracted states
-      var REQUIRED_FRAMES = 10; // 500ms intervals = 5 seconds
+      // Map to new Admin Dynamic Settings, assuming 500ms intervals (value * 2 = frames)
+      var graceSeconds = parseInt(STATE.settings['Grace time for Video recording']) || 5;
+      var REQUIRED_FRAMES = graceSeconds * 2;
 
       STATE.trackingLoop = setInterval(async function () {
         if (!STATE.faceApiLoaded || video.readyState < 2) return;
@@ -1672,7 +1674,7 @@
 
           if (noFaceFrames >= REQUIRED_FRAMES && !STATE.faceViolationCooldown) {
             noFaceFrames = 0;
-            processStrike('📷 No Face Detected!', 'Your face was not visible on camera for 5 seconds.');
+            processStrike('📷 No Face Detected!', 'Your face was not visible on camera for ' + graceSeconds + ' seconds.');
           }
         } else if (detections.length >= 2) {
           noFaceFrames = 0;
@@ -1708,9 +1710,8 @@
             var maxY = Math.max(...allEyes.map(p => p.y));
 
             ctx.strokeStyle = eyesOk ? '#00cc66' : '#ff4444';
-            ctx.lineWidth = 1; // Thinner line
-            // Draw a tight, smaller box just around the actual eye points
-            ctx.strokeRect(minX - 4, minY - 4, (maxX - minX) + 8, (maxY - minY) + 8);
+            ctx.lineWidth = 3; // Thicker, larger line for easier viewing
+            ctx.strokeRect(minX - 12, minY - 12, (maxX - minX) + 24, (maxY - minY) + 24);
           }
 
           // Eye tracking zone (centre 60% of frame)
@@ -1723,7 +1724,7 @@
 
             if (distractedFrames >= REQUIRED_FRAMES && !STATE.faceViolationCooldown) {
               distractedFrames = 0;
-              processStrike('👁️ Eyes Outside Tracking Zone!', 'You were looking away from the screen for 5 seconds.');
+              processStrike('👁️ Eyes Outside Tracking Zone!', 'You were looking away from the screen for ' + graceSeconds + ' seconds.');
             }
           } else {
             distractedFrames = 0; // User looked back, reset grace period
@@ -1740,22 +1741,25 @@
       STATE.warningCount++;
       log('WARNING TRIGGERED: ' + title + ' Count: ' + STATE.warningCount);
 
+      // Pull Admin limit from Google Sheet settings
+      var maxWarnings = parseInt(STATE.settings['No Of Warning before Flagging of No Eye and Distracted']) || 3;
+
       var eyeBox = getEl('eye-box');
-      eyeBox.innerHTML = '<span style="color:#ff4444;">●</span> REC WARNING ' + STATE.warningCount + '/3';
+      eyeBox.innerHTML = '<span style="color:#ff4444;">●</span> REC WARNING ' + STATE.warningCount + '/' + maxWarnings;
       eyeBox.className = 'eye-box warning-count';
 
-      if (STATE.warningCount >= 3) {
+      if (STATE.warningCount >= maxWarnings) {
         // Reset warnings but trigger a hard violation
         STATE.warningCount = 0;
         STATE.faceViolations++;
-        log('3 STRIKES MET: Burning question.');
+        log(maxWarnings + ' STRIKES MET: Burning question.');
         triggerViolation('Strike Penalty', title,
-          msgLabel + ' You have accumulated 3 warnings! A violation has been logged and your specific question has been burned and replaced. A snapshot was taken.', true);
+          msgLabel + ' You have accumulated ' + maxWarnings + ' warnings! A violation has been logged and your specific question has been burned and replaced. A snapshot was taken.', true);
       } else {
         // Just show a soft warning overlay, no burn
         getEl('violation-title').textContent = title;
         // Failsafe string formatting to prevent `NaN` or `undefined` text appearing on screen
-        var friendlyMsg = (msgLabel || 'A tracking violation occurred.') + '<br/><br/><strong>Warning ' + STATE.warningCount + ' of 3.</strong><br/>If you reach 3 warnings, your question will be permanently deleted and replaced with a new one.';
+        var friendlyMsg = (msgLabel || 'A tracking violation occurred.') + '<br/><br/><strong>Warning ' + STATE.warningCount + ' of ' + maxWarnings + '.</strong><br/>If you reach ' + maxWarnings + ' warnings, your question will be permanently deleted and replaced with a new one.';
         getEl('violation-message').innerHTML = friendlyMsg;
 
         getEl('violation-count-display').textContent = 'Warning Strike Logged.';
