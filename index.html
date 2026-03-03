@@ -1427,6 +1427,7 @@
 
       if (!videoMonitor && !audioMonitor) {
         log('Camera & audio monitoring both disabled. Skipping media request.');
+        getEl('loading-overlay').classList.remove('show'); // Crucial: clear loading screen if bypassing FaceAPI wait
         loadQuestionsAndBegin(false);
         return;
       }
@@ -1478,6 +1479,7 @@
           );
           if (proceed) {
             log('MEDIA DENIED/FAILED: Exam started without camera/audio. Error: ' + errName + ' - ' + errMsg);
+            getEl('loading-overlay').classList.remove('show'); // Crucial: clear loading screen if bypassing FaceAPI wait
             loadQuestionsAndBegin(false);
           }
           return;
@@ -1500,10 +1502,12 @@
         });
       } else {
         // No video monitoring required, just load questions immediately
+        getEl('loading-overlay').classList.remove('show'); // Crucial: clear loading screen if bypassing FaceAPI wait
         loadQuestionsAndBegin(false);
       }
 
-      if (audioMonitor && STATE.stream.getAudioTracks().length > 0) {
+      // Must explicitly check `STATE.stream` since it'll be null if both toggles were off
+      if (audioMonitor && STATE.stream && STATE.stream.getAudioTracks().length > 0) {
         startAudioRecording(STATE.stream);
       }
     }
@@ -1537,6 +1541,9 @@
 
     // ─── LOAD QUESTIONS ──────────────────────────────────────────
     async function loadQuestionsAndBegin(videoMonitor) {
+      // Hide the loading overlay immediately since questions are starting
+      getEl('loading-overlay').classList.remove('show');
+
       var n = parseInt(STATE.settings['Questions to Pull']) || 10;
       var shuffleQ = (STATE.settings['Shuffle Questions'] || 'No').toString();
       var shuffleO = (STATE.settings['Shuffle Options'] || 'No').toString();
