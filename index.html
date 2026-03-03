@@ -518,10 +518,11 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 140px;
-      height: 190px;
+      width: 130px;
+      height: 160px;
       border: 2px dashed rgba(255, 255, 255, 0.4);
-      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      border-radius: 8px;
+      /* Changed to a rounded rectangle */
       pointer-events: none;
       z-index: 5;
     }
@@ -1491,8 +1492,8 @@
         // Block start until AI finishes loading and validates face
         getEl('loading-overlay').innerHTML = `
           <div class="up-spinner"></div>
-          <h2 style="font-size: 1.2rem; color: var(--primary);">Initializing Proctored Session</h2>
-          <p style="color:var(--muted); font-size:0.9rem; margin-top:8px;">Running local FaceAPI checks. Please look at the camera.</p>
+          <h2 style="font-size: 1.2rem; color: var(--primary);">Setting Up Camera</h2>
+          <p style="color:var(--muted); font-size:0.9rem; margin-top:8px;">Please stay looking at the camera while we set you up.</p>
         `;
         loadFaceApi(function onSystemReady() {
           loadQuestionsAndBegin(true);
@@ -1514,7 +1515,7 @@
         // High compression to fix extremely large mobile upload times issue
         try {
           STATE.mediaRecorder = new MediaRecorder(stream, {
-            audioBitsPerSecond: 16000 // Voice quality, tiny file size
+            audioBitsPerSecond: 8000 // Voice quality, extremely tiny file size
           });
         } catch (mediaErr) {
           log('Audio: Custom bitrate unsupported. Falling back to default.');
@@ -1526,7 +1527,9 @@
         };
         STATE.mediaRecorder.onstart = function () { log('Audio recording STARTED.'); };
         STATE.mediaRecorder.onerror = function (err) { log('Audio recorder error: ' + err.message); };
-        STATE.mediaRecorder.start();
+
+        // Collect in 10-second chunks to prevent memory bloat on mobile
+        STATE.mediaRecorder.start(10000);
       } catch (err) {
         log('Error starting audio rec: ' + err.message);
       }
@@ -1705,8 +1708,9 @@
             var maxY = Math.max(...allEyes.map(p => p.y));
 
             ctx.strokeStyle = eyesOk ? '#00cc66' : '#ff4444';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(minX - 10, minY - 10, (maxX - minX) + 20, (maxY - minY) + 20);
+            ctx.lineWidth = 1; // Thinner line
+            // Draw a tight, smaller box just around the actual eye points
+            ctx.strokeRect(minX - 4, minY - 4, (maxX - minX) + 8, (maxY - minY) + 8);
           }
 
           // Eye tracking zone (centre 60% of frame)
@@ -1732,6 +1736,7 @@
     }
 
     function processStrike(title, msgLabel) {
+      if (!STATE.warningCount || isNaN(STATE.warningCount)) STATE.warningCount = 0; // Failsafe against NaN
       STATE.warningCount++;
       log('WARNING TRIGGERED: ' + title + ' Count: ' + STATE.warningCount);
 
@@ -1749,7 +1754,10 @@
       } else {
         // Just show a soft warning overlay, no burn
         getEl('violation-title').textContent = title;
-        getEl('violation-message').innerHTML = msgLabel + '<br/><br/><strong>Warning ' + STATE.warningCount + ' of 3.</strong><br/>If you reach 3 warnings, your question will be permanently deleted and replaced with a new one.';
+        // Failsafe string formatting to prevent `NaN` or `undefined` text appearing on screen
+        var friendlyMsg = (msgLabel || 'A tracking violation occurred.') + '<br/><br/><strong>Warning ' + STATE.warningCount + ' of 3.</strong><br/>If you reach 3 warnings, your question will be permanently deleted and replaced with a new one.';
+        getEl('violation-message').innerHTML = friendlyMsg;
+
         getEl('violation-count-display').textContent = 'Warning Strike Logged.';
         getEl('violation-overlay').classList.add('show');
 
@@ -2031,4 +2039,4 @@
   </script>
 </body>
 
-</html>8f
+</html>
